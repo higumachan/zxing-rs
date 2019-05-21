@@ -1,0 +1,3 @@
+[submodule "submodules/zxing-cpp"]
+	path = submodules/zxing-cpp
+	url = git@github.com:nu-book/zxing-cpp.git
