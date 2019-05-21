@@ -1,5 +1,6 @@
 use std::path::Path;
 use glob::glob;
+use std::env;
 use std::vec;
 use cc;
 
@@ -16,6 +17,8 @@ fn main() {
         .map(|x| { x.unwrap() })
         .collect()
     ;
+
+    env::set_var("CC", "ccache cc");
     cc::Build::new()
         .cpp(true)
         .flag("-std=c++11")
