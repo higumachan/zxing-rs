@@ -4,11 +4,122 @@ use std::slice::from_raw_parts;
 use std::str::from_utf8;
 use std::mem;
 use image::GenericImageView;
+use num::FromPrimitive;
 
+
+enum Format {
+    /** Aztec 2D barcode format. */
+    AZTEC,
+
+    /** CODABAR 1D format. */
+    CODABAR,
+
+    /** Code 39 1D format. */
+    CODE_39,
+
+    /** Code 93 1D format. */
+    CODE_93,
+
+    /** Code 128 1D format. */
+    CODE_128,
+
+    /** Data Matrix 2D barcode format. */
+    DATA_MATRIX,
+
+    /** EAN-8 1D format. */
+    EAN_8,
+
+    /** EAN-13 1D format. */
+    EAN_13,
+
+    /** ITF (Interleaved Two of Five) 1D format. */
+    ITF,
+
+    /** MaxiCode 2D barcode format. */
+    MAXICODE,
+
+    /** PDF417 format. */
+    PDF_417,
+
+    /** QR Code 2D barcode format. */
+    QR_CODE,
+
+    /** RSS 14 */
+    RSS_14,
+
+    /** RSS EXPANDED */
+    RSS_EXPANDED,
+
+    /** UPC-A 1D format. */
+    UPC_A,
+
+    /** UPC-E 1D format. */
+    UPC_E,
+
+    /** UPC/EAN extension format. Not a stand-alone format. */
+    UPC_EAN_EXTENSION,
+}
+
+
+impl FromPrimitive for Format {
+    fn from_i64(n: i64) -> Option<Self> {
+        if n < 0 {
+            return None;
+        }
+        Self::from_u64(n as u64)
+    }
+
+    fn from_u64(n: u64) -> Option<Self> {
+        match n {
+            0 => Some(Format::AZTEC),
+            1 => Some(Format::CODABAR),
+            2 => Some(Format::CODE_39),
+            3 => Some(Format::CODE_93),
+            4 => Some(Format::CODE_128),
+            5 => Some(Format::DATA_MATRIX),
+            6 => Some(Format::EAN_8),
+            7 => Some(Format::EAN_13),
+            8 => Some(Format::ITF),
+            9 => Some(Format::PDF_417),
+            10 => Some(Format::QR_CODE),
+            11 => Some(Format::RSS_14),
+            12 => Some(Format::RSS_EXPANDED),
+            13 => Some(Format::UPC_A),
+            14 => Some(Format::UPC_E),
+            15 => Some(Format::UPC_EAN_EXTENSION),
+            _ => None,
+        }
+    }
+}
+
+enum DecodeError {
+    NotFound = 1,
+    FormatError,
+    ChecksumError,
+}
+
+impl FromPrimitive for DecodeError {
+    fn from_i64(n: i64) -> Option<Self> {
+        if n < 0 {
+            return None;
+        }
+        Self::from_u64(n as u64)
+    }
+
+    fn from_u64(n: u64) -> Option<Self> {
+        match n {
+            1 => Some(DecodeStatus::NotFound),
+            2 => Some(DecodeStatus::FormatError),
+            3 => Some(DecodeStatus::ChecksumError),
+            _ => None,
+        }
+    }
+}
 
 pub struct DecodedQrCode {
     raw_result: *mut ZxingResult,
     pub text: String,
+    pub format: Format,
 }
 
 impl Drop for DecodedQrCode {
@@ -38,14 +149,19 @@ pub fn read_qrcode(image: DynamicImage) -> Result<DecodedQrCode, String> {
     let image_buf = image.to_rgb();
     unsafe {
         let mut result: *mut ZxingResult = mem::uninitialized();
-        let ret = crate::zxing_read_qrcode(&mut result, image_buf.as_ptr(),
+        let ret_code = crate::zxing_read_qrcode(&mut result, image_buf.as_ptr(),
                                            image.width() as crate::c_int, image.height() as crate::c_int,
                                            (image.width() * 3) as crate::c_int,
                                            3, 0, 1, 2);
+
+        if ret_code != 0 {
+            result
+        }
+
         let s = from_raw_parts((*result).bytes, (*result).bytes_size as usize);
         let text = from_utf8(s).unwrap();
 
-        return Ok(DecodedQrCode{ raw_result: result, text: text.to_string()})
+        return Ok(DecodedQrCode{ raw_result: result, text: text.to_string(), format: Format::from_i32(result.format).ok_or("unknown format")?})
     }
 }
 
@@ -57,7 +173,7 @@ mod tests {
     use image::open;
     use image::GenericImageView;
     use std::path::Path;
-    use crate::{ZxingResult, read_qrcode};
+    use crate::{ZxingResult, read_qrcode, Format};
     use std::env;
     use std::slice::from_raw_parts;
     use std::str::from_utf8;
@@ -94,5 +210,6 @@ mod tests {
 
         let result = crate::read_qrcode(image);
         assert_eq!(result.unwrap().text, "http://www.amazon.co.jp/gp/aw/rd.html?uid=NULLGWDOCOMO&url=/gp/aw/h.html&at=aw_intl6-22");
+        assert_eq!(result.unwrap().format, crate::Format::QR_CODE);
     }
 }
