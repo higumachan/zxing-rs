@@ -7,6 +7,7 @@ use image::GenericImageView;
 use num::FromPrimitive;
 
 
+#[allow(non_camel_case_types)]
 #[derive(Debug, PartialEq)]
 pub enum Format {
     /** Aztec 2D barcode format. */
@@ -178,7 +179,7 @@ mod tests {
     use image::open;
     use image::GenericImageView;
     use std::path::Path;
-    use crate::{ZxingResult, read_qrcode, Format};
+    use crate::{ZxingResult, read_qrcode, Format, DecodeError};
     use std::env;
     use std::slice::from_raw_parts;
     use std::str::from_utf8;
@@ -216,5 +217,15 @@ mod tests {
         let result = crate::read_qrcode(image).unwrap();
         assert_eq!(result.text, "http://www.amazon.co.jp/gp/aw/rd.html?uid=NULLGWDOCOMO&url=/gp/aw/h.html&at=aw_intl6-22");
         assert_eq!(result.format, crate::Format::QR_CODE);
+    }
+
+    #[test]
+    fn test_nodetect_error() {
+        let path = Path::new("./image/nadeko1.jpg");
+        let image = open(path).unwrap();
+
+        let result = crate::read_qrcode(image);
+        assert!(result.is_err());
+        assert_eq!(result.err().unwrap(), DecodeError::NotFound);
     }
 }
