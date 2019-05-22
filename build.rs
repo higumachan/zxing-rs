@@ -18,7 +18,6 @@ fn main() {
         .collect()
     ;
 
-    env::set_var("CC", "ccache cc");
     cc::Build::new()
         .cpp(true)
         .flag("-std=c++11")

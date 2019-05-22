@@ -7,7 +7,8 @@ use image::GenericImageView;
 use num::FromPrimitive;
 
 
-enum Format {
+#[derive(Debug, PartialEq)]
+pub enum Format {
     /** Aztec 2D barcode format. */
     AZTEC,
 
@@ -80,19 +81,22 @@ impl FromPrimitive for Format {
             6 => Some(Format::EAN_8),
             7 => Some(Format::EAN_13),
             8 => Some(Format::ITF),
-            9 => Some(Format::PDF_417),
-            10 => Some(Format::QR_CODE),
-            11 => Some(Format::RSS_14),
-            12 => Some(Format::RSS_EXPANDED),
-            13 => Some(Format::UPC_A),
-            14 => Some(Format::UPC_E),
-            15 => Some(Format::UPC_EAN_EXTENSION),
+            9 => Some(Format::MAXICODE),
+            10 => Some(Format::PDF_417),
+            11 => Some(Format::QR_CODE),
+            12 => Some(Format::RSS_14),
+            13 => Some(Format::RSS_EXPANDED),
+            14 => Some(Format::UPC_A),
+            15 => Some(Format::UPC_E),
+            16 => Some(Format::UPC_EAN_EXTENSION),
             _ => None,
         }
     }
 }
 
-enum DecodeError {
+
+#[derive(Debug, PartialEq)]
+pub enum DecodeError {
     NotFound = 1,
     FormatError,
     ChecksumError,
@@ -108,13 +112,14 @@ impl FromPrimitive for DecodeError {
 
     fn from_u64(n: u64) -> Option<Self> {
         match n {
-            1 => Some(DecodeStatus::NotFound),
-            2 => Some(DecodeStatus::FormatError),
-            3 => Some(DecodeStatus::ChecksumError),
+            1 => Some(DecodeError::NotFound),
+            2 => Some(DecodeError::FormatError),
+            3 => Some(DecodeError::ChecksumError),
             _ => None,
         }
     }
 }
+
 
 pub struct DecodedQrCode {
     raw_result: *mut ZxingResult,
@@ -145,7 +150,7 @@ extern "C" {
     fn release_result(result: *mut ZxingResult);
 }
 
-pub fn read_qrcode(image: DynamicImage) -> Result<DecodedQrCode, String> {
+pub fn read_qrcode(image: DynamicImage) -> Result<DecodedQrCode, DecodeError> {
     let image_buf = image.to_rgb();
     unsafe {
         let mut result: *mut ZxingResult = mem::uninitialized();
@@ -155,13 +160,13 @@ pub fn read_qrcode(image: DynamicImage) -> Result<DecodedQrCode, String> {
                                            3, 0, 1, 2);
 
         if ret_code != 0 {
-            result
+            return Err(DecodeError::from_i32((*result).status).unwrap());
         }
 
         let s = from_raw_parts((*result).bytes, (*result).bytes_size as usize);
         let text = from_utf8(s).unwrap();
 
-        return Ok(DecodedQrCode{ raw_result: result, text: text.to_string(), format: Format::from_i32(result.format).ok_or("unknown format")?})
+        Ok(DecodedQrCode{ raw_result: result, text: text.to_string(), format: Format::from_i32((*result).format).unwrap()})
     }
 }
 
@@ -208,8 +213,8 @@ mod tests {
         let path = Path::new("./image/01-1.png");
         let image = open(path).unwrap();
 
-        let result = crate::read_qrcode(image);
-        assert_eq!(result.unwrap().text, "http://www.amazon.co.jp/gp/aw/rd.html?uid=NULLGWDOCOMO&url=/gp/aw/h.html&at=aw_intl6-22");
-        assert_eq!(result.unwrap().format, crate::Format::QR_CODE);
+        let result = crate::read_qrcode(image).unwrap();
+        assert_eq!(result.text, "http://www.amazon.co.jp/gp/aw/rd.html?uid=NULLGWDOCOMO&url=/gp/aw/h.html&at=aw_intl6-22");
+        assert_eq!(result.format, crate::Format::QR_CODE);
     }
 }
