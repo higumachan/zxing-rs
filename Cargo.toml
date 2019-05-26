@@ -5,6 +5,7 @@ authors = ["higumachan <yuta.hinokuma725@gmail.com>"]
 edition = "2018"
 exclude = [
     "image",
+    "submodules/zxing-cpp/test"
 ]
 
 [build-dependencies]
