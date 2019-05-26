@@ -3,9 +3,13 @@ name = "zxing-rs"
 version = "0.1.0"
 authors = ["higumachan <yuta.hinokuma725@gmail.com>"]
 edition = "2018"
-exclude = [
-    "image/*",
-    "submodules/zxing-cpp/test/*"
+build = "build.rs"
+include = [
+    "c_api/**/*",
+    "src/*",
+    "build.rs",
+    "Cargo.toml",
+    "submodules/zxing-cpp/core/**/*",
 ]
 
 [build-dependencies]
