@@ -1,6 +1,6 @@
 [package]
 name = "zxing-rs"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["higumachan <yuta.hinokuma725@gmail.com>"]
 edition = "2018"
 description = "port from [zxing-cpp](https://github.com/nu-book/zxing-cpp)"
