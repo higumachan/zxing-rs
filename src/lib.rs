@@ -5,6 +5,7 @@ use std::str::from_utf8;
 use std::mem;
 use image::GenericImageView;
 use num::FromPrimitive;
+use std::ffi::CString;
 
 
 #[allow(non_camel_case_types)]
@@ -122,6 +123,11 @@ impl FromPrimitive for DecodeError {
 }
 
 
+#[derive(Debug, PartialEq)]
+pub enum EncodeError {
+    FormatError,
+}
+
 pub struct DecodedQrCode {
     raw_result: *mut ZxingResult,
     pub text: String,
@@ -149,13 +155,16 @@ struct ZxingResult {
 extern "C" {
     fn zxing_read_qrcode(result: *mut *mut ZxingResult, buffer: *const u8, width: c_int, height: c_int, row_bytes: c_int, pixel_bytes: c_int, index_r: c_int, index_g: c_int, index_b: c_int) -> c_int;
     fn release_result(result: *mut ZxingResult);
+
+    fn zxing_write_qrcode(text: *const i8, buffer: *mut *mut u8, format: c_int, width: c_int, height: c_int, margin: c_int, ecc_level: c_int) -> c_int;
+    fn zxing_write_release_buffer(buffer: *mut u8) -> c_int;
 }
 
 pub fn read_qrcode(image: DynamicImage) -> Result<DecodedQrCode, DecodeError> {
     let image_buf = image.to_rgb();
     unsafe {
         let mut result: *mut ZxingResult = mem::uninitialized();
-        let ret_code = crate::zxing_read_qrcode(&mut result, image_buf.as_ptr(),
+        let ret_code = zxing_read_qrcode(&mut result, image_buf.as_ptr(),
                                            image.width() as crate::c_int, image.height() as crate::c_int,
                                            (image.width() * 3) as crate::c_int,
                                            3, 0, 1, 2);
@@ -171,6 +180,24 @@ pub fn read_qrcode(image: DynamicImage) -> Result<DecodedQrCode, DecodeError> {
     }
 }
 
+pub fn write_qrcode(text: &str, format: Format, width: u64, height: u64, mergin: u64, ecc_level: u64) -> Result<Vec<u8>, EncodeError>
+{
+    let mut buffer_vector = Vec::new();
+    unsafe {
+        let mut buffer: *mut u8 = mem::uninitialized();
+        let buffer_size = zxing_write_qrcode(
+            CString::new(text).unwrap().as_ptr(), &mut buffer,
+            format as c_int, width as c_int, height as c_int,
+            mergin as c_int, ecc_level as c_int
+        );
+        println!("{}", buffer_size);
+        buffer_vector.resize(buffer_size as usize, 0);
+        buffer.copy_to(buffer_vector.as_mut_ptr(), buffer_size as usize);
+    }
+
+    return Ok(buffer_vector);
+}
+
 #[cfg(test)]
 mod tests {
     extern crate image;
@@ -183,6 +210,9 @@ mod tests {
     use std::env;
     use std::slice::from_raw_parts;
     use std::str::from_utf8;
+    use std::fs::File;
+    use self::image::png::PNGEncoder;
+    use self::image::ColorType;
 
     #[test]
     fn test_read() {
@@ -227,5 +257,28 @@ mod tests {
         let result = crate::read_qrcode(image);
         assert!(result.is_err());
         assert_eq!(result.err().unwrap(), DecodeError::NotFound);
+    }
+
+    #[test]
+    fn test_write_qrcode() {
+        let text = "nadeko is cute";
+
+        let buf = crate::write_qrcode(text, crate::Format::QR_CODE, 200, 200, 10, 0);
+
+        assert!(buf.is_ok());
+
+        let path = "test.png";
+        let output = File::create(path).unwrap();
+
+        let encoder = PNGEncoder::new(output);
+        let res = encoder.encode(buf.unwrap().as_slice(), 200 as u32, 200 as u32, ColorType::Gray(8));
+
+        assert!(res.is_ok());
+
+        let image = open(path).unwrap();
+
+        let result = crate::read_qrcode(image).unwrap();
+        assert_eq!(result.text, "nadeko is cute");
+        assert_eq!(result.format, crate::Format::QR_CODE);
     }
 }

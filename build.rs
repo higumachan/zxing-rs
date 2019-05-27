@@ -24,6 +24,7 @@ fn main() {
         .flag("-Wno-missing-braces")
         .include(core_src_dir)
         .files(core_sources)
+        .skip_when_compiled(true)
         .compile("zxing_core")
     ;
     cc::Build::new()

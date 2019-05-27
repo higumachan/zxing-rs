@@ -26,3 +26,6 @@ num = "0.2"
 
 [features]
 parallel = ["cc/parallel"]
+
+[patch.crates-io]
+cc = { path = '/Users/yuta/repos/ghq/github.com/alexcrichton/cc-rs' }
