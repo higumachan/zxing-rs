@@ -213,6 +213,7 @@ mod tests {
     use std::fs::File;
     use self::image::png::PNGEncoder;
     use self::image::ColorType;
+    use tempdir::TempDir;
 
     #[test]
     fn test_read() {
@@ -261,21 +262,22 @@ mod tests {
 
     #[test]
     fn test_write_qrcode() {
+        let td = TempDir::new("test_dir").unwrap();
         let text = "nadeko is cute";
 
         let buf = crate::write_qrcode(text, crate::Format::QR_CODE, 200, 200, 10, 0);
 
         assert!(buf.is_ok());
 
-        let path = "test.png";
-        let output = File::create(path).unwrap();
+        let path = td.path().join("test.png");
+        let output = File::create(&path).unwrap();
 
         let encoder = PNGEncoder::new(output);
         let res = encoder.encode(buf.unwrap().as_slice(), 200 as u32, 200 as u32, ColorType::Gray(8));
 
         assert!(res.is_ok());
 
-        let image = open(path).unwrap();
+        let image = open(&path).unwrap();
 
         let result = crate::read_qrcode(image).unwrap();
         assert_eq!(result.text, "nadeko is cute");
