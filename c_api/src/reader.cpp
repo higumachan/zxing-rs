@@ -21,7 +21,7 @@ zxing_read_qrcode(ZXING_RESULT **result, const uint8_t *buffer, int width, int h
                   int index_g, int index_b)
 {
     ZXing::DecodeHints hints;
-    hints.setShouldTryHarder(true);
+    hints.setTryHarder(true);
     ZXing::MultiFormatReader reader(hints);
 
     ZXing::GenericLuminanceSource source((int)width, (int)height, buffer, row_bytes, pixel_bytes, index_r, index_g, index_b);
