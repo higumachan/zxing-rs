@@ -10,8 +10,8 @@
 #include "GenericLuminanceSource.h"
 #include "HybridBinarizer.h"
 #include "TextUtfEncoding.h"
+#include <cstring>
 #include <iostream>
-
 
 using Binarizer = ZXing::HybridBinarizer;
 

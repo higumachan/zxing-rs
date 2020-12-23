@@ -1,12 +1,11 @@
-use std::os::raw::c_int;
 use image::DynamicImage;
-use std::slice::from_raw_parts;
-use std::str::from_utf8;
-use std::mem;
 use image::GenericImageView;
 use num::FromPrimitive;
 use std::ffi::CString;
-
+use std::mem;
+use std::os::raw::c_int;
+use std::slice::from_raw_parts;
+use std::str::from_utf8;
 
 #[allow(non_camel_case_types)]
 #[derive(Debug, PartialEq)]
@@ -63,7 +62,6 @@ pub enum Format {
     UPC_EAN_EXTENSION,
 }
 
-
 impl FromPrimitive for Format {
     fn from_i64(n: i64) -> Option<Self> {
         if n < 0 {
@@ -96,7 +94,6 @@ impl FromPrimitive for Format {
     }
 }
 
-
 #[derive(Debug, PartialEq)]
 pub enum DecodeError {
     NotFound = 1,
@@ -121,7 +118,6 @@ impl FromPrimitive for DecodeError {
         }
     }
 }
-
 
 #[derive(Debug, PartialEq)]
 pub enum EncodeError {
@@ -153,10 +149,28 @@ struct ZxingResult {
 
 #[link(name = "zxing_c_api", kind = "static")]
 extern "C" {
-    fn zxing_read_qrcode(result: *mut *mut ZxingResult, buffer: *const u8, width: c_int, height: c_int, row_bytes: c_int, pixel_bytes: c_int, index_r: c_int, index_g: c_int, index_b: c_int) -> c_int;
+    fn zxing_read_qrcode(
+        result: *mut *mut ZxingResult,
+        buffer: *const u8,
+        width: c_int,
+        height: c_int,
+        row_bytes: c_int,
+        pixel_bytes: c_int,
+        index_r: c_int,
+        index_g: c_int,
+        index_b: c_int,
+    ) -> c_int;
     fn release_result(result: *mut ZxingResult);
 
-    fn zxing_write_qrcode(text: *const i8, buffer: *mut *mut u8, format: c_int, width: c_int, height: c_int, margin: c_int, ecc_level: c_int) -> c_int;
+    fn zxing_write_qrcode(
+        text: *const i8,
+        buffer: *mut *mut u8,
+        format: c_int,
+        width: c_int,
+        height: c_int,
+        margin: c_int,
+        ecc_level: c_int,
+    ) -> c_int;
     fn zxing_write_release_buffer(buffer: *mut u8) -> c_int;
 }
 
@@ -164,10 +178,17 @@ pub fn read_qrcode(image: DynamicImage) -> Result<DecodedQrCode, DecodeError> {
     let image_buf = image.to_rgb();
     unsafe {
         let mut result: *mut ZxingResult = mem::uninitialized();
-        let ret_code = zxing_read_qrcode(&mut result, image_buf.as_ptr(),
-                                           image.width() as crate::c_int, image.height() as crate::c_int,
-                                           (image.width() * 3) as crate::c_int,
-                                           3, 0, 1, 2);
+        let ret_code = zxing_read_qrcode(
+            &mut result,
+            image_buf.as_ptr(),
+            image.width() as crate::c_int,
+            image.height() as crate::c_int,
+            (image.width() * 3) as crate::c_int,
+            3,
+            0,
+            1,
+            2,
+        );
 
         if ret_code != 0 {
             return Err(DecodeError::from_i32((*result).status).unwrap());
@@ -176,19 +197,33 @@ pub fn read_qrcode(image: DynamicImage) -> Result<DecodedQrCode, DecodeError> {
         let s = from_raw_parts((*result).bytes, (*result).bytes_size as usize);
         let text = from_utf8(s).unwrap();
 
-        Ok(DecodedQrCode{ raw_result: result, text: text.to_string(), format: Format::from_i32((*result).format).unwrap()})
+        Ok(DecodedQrCode {
+            raw_result: result,
+            text: text.to_string(),
+            format: Format::from_i32((*result).format).unwrap(),
+        })
     }
 }
 
-pub fn write_qrcode(text: &str, format: Format, width: u64, height: u64, mergin: u64, ecc_level: u64) -> Result<Vec<u8>, EncodeError>
-{
+pub fn write_qrcode(
+    text: &str,
+    format: Format,
+    width: u64,
+    height: u64,
+    mergin: u64,
+    ecc_level: u64,
+) -> Result<Vec<u8>, EncodeError> {
     let mut buffer_vector = Vec::new();
     unsafe {
         let mut buffer: *mut u8 = mem::uninitialized();
         let buffer_size = zxing_write_qrcode(
-            CString::new(text).unwrap().as_ptr(), &mut buffer,
-            format as c_int, width as c_int, height as c_int,
-            mergin as c_int, ecc_level as c_int
+            CString::new(text).unwrap().as_ptr(),
+            &mut buffer,
+            format as c_int,
+            width as c_int,
+            height as c_int,
+            mergin as c_int,
+            ecc_level as c_int,
         );
         println!("{}", buffer_size);
         buffer_vector.resize(buffer_size as usize, 0);
@@ -202,17 +237,17 @@ pub fn write_qrcode(text: &str, format: Format, width: u64, height: u64, mergin:
 mod tests {
     extern crate image;
 
-    use std::mem;
-    use image::open;
-    use image::GenericImageView;
-    use std::path::Path;
-    use crate::{ZxingResult, read_qrcode, Format, DecodeError};
-    use std::env;
-    use std::slice::from_raw_parts;
-    use std::str::from_utf8;
-    use std::fs::File;
     use self::image::png::PNGEncoder;
     use self::image::ColorType;
+    use crate::{read_qrcode, DecodeError, Format, ZxingResult};
+    use image::open;
+    use image::GenericImageView;
+    use std::env;
+    use std::fs::File;
+    use std::mem;
+    use std::path::Path;
+    use std::slice::from_raw_parts;
+    use std::str::from_utf8;
     use tempdir::TempDir;
 
     #[test]
@@ -227,12 +262,19 @@ mod tests {
         let image_buf = image.to_rgba();
         unsafe {
             let mut result: *mut ZxingResult = mem::uninitialized();
-            let ret = crate::zxing_read_qrcode(&mut result,image_buf.as_ptr(),
-                                               image.width() as crate::c_int,image.height() as crate::c_int,
-                                               (image.width() * 4) as crate::c_int,
-                                               4 ,0, 1, 2);
+            let ret = crate::zxing_read_qrcode(
+                &mut result,
+                image_buf.as_ptr(),
+                image.width() as crate::c_int,
+                image.height() as crate::c_int,
+                (image.width() * 4) as crate::c_int,
+                4,
+                0,
+                1,
+                2,
+            );
             let s = from_raw_parts((*result).bytes, (*result).bytes_size as usize);
-            let text = from_utf8(s) ;
+            let text = from_utf8(s);
 
             assert_eq!(ret, 0);
             assert!(text.is_ok());
@@ -273,7 +315,12 @@ mod tests {
         let output = File::create(&path).unwrap();
 
         let encoder = PNGEncoder::new(output);
-        let res = encoder.encode(buf.unwrap().as_slice(), 200 as u32, 200 as u32, ColorType::Gray(8));
+        let res = encoder.encode(
+            buf.unwrap().as_slice(),
+            200 as u32,
+            200 as u32,
+            ColorType::Gray(8),
+        );
 
         assert!(res.is_ok());
 
