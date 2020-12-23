@@ -7,90 +7,74 @@ use std::os::raw::c_int;
 use std::slice::from_raw_parts;
 use std::str::from_utf8;
 
-#[allow(non_camel_case_types)]
-#[derive(Debug, PartialEq)]
-pub enum Format {
-    /** Aztec 2D barcode format. */
-    AZTEC,
+#[macro_use]
+extern crate bitflags;
 
-    /** CODABAR 1D format. */
-    CODABAR,
+bitflags! {
+    #[allow(non_camel_case_types)]
+    pub struct Format: u32 {
+        /** Aztec 2D barcode format. */
+        const AZTEC = (1 << 0);
 
-    /** Code 39 1D format. */
-    CODE_39,
+        /** CODABAR 1D format. */
+        const CODABAR = (1 << 1);
 
-    /** Code 93 1D format. */
-    CODE_93,
+        /** Code 39 1D format. */
+        const CODE_39 = (1 << 2);
 
-    /** Code 128 1D format. */
-    CODE_128,
+        /** Code 93 1D format. */
+        const CODE_93 = (1 << 3);
 
-    /** Data Matrix 2D barcode format. */
-    DATA_MATRIX,
+        /** Code 128 1D format. */
+        const CODE_128 = (1 << 4);
 
-    /** EAN-8 1D format. */
-    EAN_8,
+        /** Data Matrix 2D barcode format. */
+        const DATA_MATRIX = (1 << 5);
 
-    /** EAN-13 1D format. */
-    EAN_13,
+        /** EAN-8 1D format. */
+        const EAN_8 = (1 << 6);
 
-    /** ITF (Interleaved Two of Five) 1D format. */
-    ITF,
+        /** EAN-13 1D format. */
+        const EAN_13 = (1 << 7);
 
-    /** MaxiCode 2D barcode format. */
-    MAXICODE,
+        /** ITF (Interleaved Two of Five) 1D format. */
+        const ITF = (1 << 8);
 
-    /** PDF417 format. */
-    PDF_417,
+        /** MaxiCode 2D barcode format. */
+        const MAXICODE = (1 << 9);
 
-    /** QR Code 2D barcode format. */
-    QR_CODE,
+        /** PDF417 format. */
+        const PDF_417 = (1 << 10);
 
-    /** RSS 14 */
-    RSS_14,
+        /** QR Code 2D barcode format. */
+        const QR_CODE = (1 << 11);
 
-    /** RSS EXPANDED */
-    RSS_EXPANDED,
+        /** RSS 14 */
+        const RSS_14 = (1 << 12);
 
-    /** UPC-A 1D format. */
-    UPC_A,
+        /** RSS EXPANDED */
+        const RSS_EXPANDED = (1 << 13);
 
-    /** UPC-E 1D format. */
-    UPC_E,
+        /** UPC-A 1D format. */
+        const UPC_A = (1 << 14);
 
-    /** UPC/EAN extension format. Not a stand-alone format. */
-    UPC_EAN_EXTENSION,
+        /** UPC-E 1D format. */
+        const UPC_E = (1 << 15);
+
+        /** UPC/EAN extension (1D). Not a stand-alone format. */
+        const UPC_EAN_EXTENSION = (1 << 16);
+    }
 }
 
-impl FromPrimitive for Format {
-    fn from_i64(n: i64) -> Option<Self> {
-        if n < 0 {
-            return None;
-        }
-        Self::from_u64(n as u64)
+impl Into<c_int> for Format {
+    fn into(self) -> c_int {
+        self.bits() as c_int
     }
+}
 
-    fn from_u64(n: u64) -> Option<Self> {
-        match n {
-            0 => Some(Format::AZTEC),
-            1 => Some(Format::CODABAR),
-            2 => Some(Format::CODE_39),
-            3 => Some(Format::CODE_93),
-            4 => Some(Format::CODE_128),
-            5 => Some(Format::DATA_MATRIX),
-            6 => Some(Format::EAN_8),
-            7 => Some(Format::EAN_13),
-            8 => Some(Format::ITF),
-            9 => Some(Format::MAXICODE),
-            10 => Some(Format::PDF_417),
-            11 => Some(Format::QR_CODE),
-            12 => Some(Format::RSS_14),
-            13 => Some(Format::RSS_EXPANDED),
-            14 => Some(Format::UPC_A),
-            15 => Some(Format::UPC_E),
-            16 => Some(Format::UPC_EAN_EXTENSION),
-            _ => None,
-        }
+impl From<c_int> for Format {
+    fn from(value: c_int) -> Format {
+        Format::from_bits_truncate(value as u32)
     }
 }
 
@@ -175,11 +159,11 @@ extern "C" {
 }
 
 pub fn read_qrcode(image: DynamicImage) -> Result<DecodedQrCode, DecodeError> {
-    let image_buf = image.to_rgb();
+    let image_buf = image.to_rgb8();
+    let mut result = mem::MaybeUninit::<*mut ZxingResult>::uninit();
     unsafe {
-        let mut result: *mut ZxingResult = mem::uninitialized();
         let ret_code = zxing_read_qrcode(
-            &mut result,
+            result.as_mut_ptr(),
             image_buf.as_ptr(),
             image.width() as crate::c_int,
             image.height() as crate::c_int,
@@ -189,6 +173,7 @@ pub fn read_qrcode(image: DynamicImage) -> Result<DecodedQrCode, DecodeError> {
             1,
             2,
         );
+        let result = result.assume_init();
 
         if ret_code != 0 {
             return Err(DecodeError::from_i32((*result).status).unwrap());
@@ -200,7 +185,7 @@ pub fn read_qrcode(image: DynamicImage) -> Result<DecodedQrCode, DecodeError> {
         Ok(DecodedQrCode {
             raw_result: result,
             text: text.to_string(),
-            format: Format::from_i32((*result).format).unwrap(),
+            format: (*result).format.into(),
         })
     }
 }
@@ -219,7 +204,7 @@ pub fn write_qrcode(
         let buffer_size = zxing_write_qrcode(
             CString::new(text).unwrap().as_ptr(),
             &mut buffer,
-            format as c_int,
+            format.into(),
             width as c_int,
             height as c_int,
             mergin as c_int,
@@ -237,10 +222,10 @@ pub fn write_qrcode(
 mod tests {
     extern crate image;
 
-    use self::image::png::PNGEncoder;
-    use self::image::ColorType;
     use crate::{read_qrcode, DecodeError, Format, ZxingResult};
     use image::open;
+    use image::png::PNGEncoder;
+    use image::ColorType;
     use image::GenericImageView;
     use std::env;
     use std::fs::File;
@@ -319,7 +304,7 @@ mod tests {
             buf.unwrap().as_slice(),
             200 as u32,
             200 as u32,
-            ColorType::Gray(8),
+            ColorType::L8,
         );
 
         assert!(res.is_ok());

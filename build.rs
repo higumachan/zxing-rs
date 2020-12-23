@@ -1,8 +1,6 @@
 use cc;
 use glob::glob;
-use std::env;
 use std::path::Path;
-use std::vec;
 
 fn main() {
     let c_api_src_dir = Path::new("c_api/src");
