@@ -13,6 +13,7 @@ typedef struct ZxingQrResult {
     int format;
     uint8_t* bytes;
     int bytes_size;
+    int corners[8];
 } ZXING_RESULT;
 
 

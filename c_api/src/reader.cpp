@@ -46,6 +46,15 @@ zxing_read_qrcode(ZXING_RESULT **result, const uint8_t *buffer, int width, int h
     std::memcpy((*result)->bytes, s.data(), sizeof(char) * s.size());
     (*result)->bytes_size = sizeof(char) * s.size();
 
+    ZXing::Quadrilateral<ZXing::PointT<int>> pos = reader_result.position();
+    (*result)->corners[0] = pos.topLeft().x;
+    (*result)->corners[1] = pos.topLeft().y;
+    (*result)->corners[2] = pos.topRight().x;
+    (*result)->corners[3] = pos.topRight().y;
+    (*result)->corners[4] = pos.bottomRight().x;
+    (*result)->corners[5] = pos.bottomRight().y;
+    (*result)->corners[6] = pos.bottomLeft().x;
+    (*result)->corners[7] = pos.bottomLeft().y;
     return 0;
 }
 

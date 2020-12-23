@@ -112,6 +112,7 @@ pub struct DecodedQrCode {
     raw_result: *mut ZxingResult,
     pub text: String,
     pub format: Format,
+    pub corners: [(i32, i32); 4],
 }
 
 impl Drop for DecodedQrCode {
@@ -129,6 +130,7 @@ struct ZxingResult {
     format: c_int,
     bytes: *mut u8,
     bytes_size: c_int,
+    corners: [c_int; 8],
 }
 
 #[link(name = "zxing_c_api", kind = "static")]
@@ -181,11 +183,18 @@ pub fn read_qrcode(image: DynamicImage) -> Result<DecodedQrCode, DecodeError> {
 
         let s = from_raw_parts((*result).bytes, (*result).bytes_size as usize);
         let text = from_utf8(s).unwrap();
+        let mut corner_iter = (*result).corners.chunks(2).map(|c| (c[0], c[1]));
 
         Ok(DecodedQrCode {
             raw_result: result,
             text: text.to_string(),
             format: (*result).format.into(),
+            corners: [
+                corner_iter.next().unwrap(),
+                corner_iter.next().unwrap(),
+                corner_iter.next().unwrap(),
+                corner_iter.next().unwrap(),
+            ],
         })
     }
 }
@@ -244,7 +253,7 @@ mod tests {
             println!("{:?}", err);
         }
         let image = image.unwrap();
-        let image_buf = image.to_rgba();
+        let image_buf = image.to_rgba8();
         unsafe {
             let mut result: *mut ZxingResult = mem::uninitialized();
             let ret = crate::zxing_read_qrcode(
@@ -275,6 +284,15 @@ mod tests {
         let result = crate::read_qrcode(image).unwrap();
         assert_eq!(result.text, "http://www.amazon.co.jp/gp/aw/rd.html?uid=NULLGWDOCOMO&url=/gp/aw/h.html&at=aw_intl6-22");
         assert_eq!(result.format, crate::Format::QR_CODE);
+        assert_eq!(
+            result.corners,
+            [
+                (72i32, 116i32),
+                (228i32, 111i32),
+                (233i32, 268i32),
+                (76i32, 273i32)
+            ]
+        );
     }
 
     #[test]
