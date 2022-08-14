@@ -178,7 +178,10 @@ pub fn read_qrcode(image: DynamicImage) -> Result<DecodedQrCode, DecodeError> {
         let result = result.assume_init();
 
         if ret_code != 0 {
-            return Err(DecodeError::from_i32((*result).status).unwrap());
+            let error = DecodeError::from_i32((*result).status).unwrap();
+
+            release_result(result);
+            return Err(error);
         }
 
         let s = from_raw_parts((*result).bytes, (*result).bytes_size as usize);
