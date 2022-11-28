@@ -3,32 +3,29 @@
 //
 
 #include <cstdlib>
-#include "reader.h"
-#include <DecodeHints.h>
-#include <Result.h>
-#include "MultiFormatReader.h"
-#include "GenericLuminanceSource.h"
-#include "HybridBinarizer.h"
-#include "TextUtfEncoding.h"
 #include <cstring>
 #include <iostream>
+#include "reader.h"
+#include "DecodeHints.h"
+#include "Result.h"
+#include "MultiFormatReader.h"
+#include "HybridBinarizer.h"
+#include "TextUtfEncoding.h"
+#include "ReadBarcode.h"
 
 using Binarizer = ZXing::HybridBinarizer;
 
 int
-zxing_read_qrcode(ZXING_RESULT **result, const uint8_t *buffer, int width, int height, int row_bytes, int pixel_bytes,
-                  int index_r,
-                  int index_g, int index_b)
+zxing_read_qrcode(ZXING_RESULT **result, const uint8_t *buffer, int width, int height, int row_bytes, int pixel_bytes)
 {
     ZXing::DecodeHints hints;
     hints.setTryHarder(true);
+    hints.setBinarizer(ZXing::Binarizer::LocalAverage);
     ZXing::MultiFormatReader reader(hints);
 
-    ZXing::GenericLuminanceSource source((int)width, (int)height, buffer, row_bytes, pixel_bytes, index_r, index_g, index_b);
-    Binarizer binImage(std::shared_ptr<ZXing::LuminanceSource>(&source, [](void*) {}));
+    ZXing::ImageView image { buffer, width, height, ZXing::ImageFormat::RGB, row_bytes, pixel_bytes };
 
-    ZXing::Result reader_result = reader.read(binImage);
-
+    ZXing::Result reader_result = ZXing::ReadBarcode(image, hints);
 
 
     *result = (ZXING_RESULT *)malloc(sizeof(ZXING_RESULT));
@@ -41,7 +38,7 @@ zxing_read_qrcode(ZXING_RESULT **result, const uint8_t *buffer, int width, int h
     }
 
     (*result)->format = static_cast<int>(reader_result.format());
-    auto s = ZXing::TextUtfEncoding::ToUtf8(reader_result.text());
+    auto s = reader_result.text();
     (*result)->bytes = (uint8_t *)malloc(sizeof(char) * s.size());
     std::memcpy((*result)->bytes, s.data(), sizeof(char) * s.size());
     (*result)->bytes_size = sizeof(char) * s.size();

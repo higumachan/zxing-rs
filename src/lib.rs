@@ -28,32 +28,32 @@ bitflags! {
         /** Code 128 1D format. */
         const CODE_128 = (1 << 4);
 
+        /** GS1 DataBar, formerly known as RSS 14. */
+        const DATA_BAR = (1 << 5);
+
+        /** GS1 DataBar Expanded, formerly known as RSS EXPANDED. */
+        const DATA_BAR_EXPANDED = (1 << 6);
+
         /** Data Matrix 2D barcode format. */
-        const DATA_MATRIX = (1 << 5);
+        const DATA_MATRIX = (1 << 7);
 
         /** EAN-8 1D format. */
-        const EAN_8 = (1 << 6);
+        const EAN_8 = (1 << 8);
 
         /** EAN-13 1D format. */
-        const EAN_13 = (1 << 7);
+        const EAN_13 = (1 << 9);
 
         /** ITF (Interleaved Two of Five) 1D format. */
-        const ITF = (1 << 8);
+        const ITF = (1 << 10);
 
         /** MaxiCode 2D barcode format. */
-        const MAXICODE = (1 << 9);
+        const MAXICODE = (1 << 11);
 
         /** PDF417 format. */
-        const PDF_417 = (1 << 10);
+        const PDF_417 = (1 << 12);
 
         /** QR Code 2D barcode format. */
-        const QR_CODE = (1 << 11);
-
-        /** RSS 14 */
-        const RSS_14 = (1 << 12);
-
-        /** RSS EXPANDED */
-        const RSS_EXPANDED = (1 << 13);
+        const QR_CODE = (1 << 13);
 
         /** UPC-A 1D format. */
         const UPC_A = (1 << 14);
@@ -61,8 +61,8 @@ bitflags! {
         /** UPC-E 1D format. */
         const UPC_E = (1 << 15);
 
-        /** UPC/EAN extension (1D). Not a stand-alone format. */
-        const UPC_EAN_EXTENSION = (1 << 16);
+        /** Micro QR Code format. */
+        const MICROQR_CODE = (1 << 16);
     }
 }
 
@@ -142,9 +142,6 @@ extern "C" {
         height: c_int,
         row_bytes: c_int,
         pixel_bytes: c_int,
-        index_r: c_int,
-        index_g: c_int,
-        index_b: c_int,
     ) -> c_int;
     fn release_result(result: *mut ZxingResult);
 
@@ -171,9 +168,6 @@ pub fn read_qrcode(image: DynamicImage) -> Result<DecodedQrCode, DecodeError> {
             image.height() as crate::c_int,
             (image.width() * 3) as crate::c_int,
             3,
-            0,
-            1,
-            2,
         );
         let result = result.assume_init();
 
@@ -266,9 +260,6 @@ mod tests {
                 image.height() as crate::c_int,
                 (image.width() * 4) as crate::c_int,
                 4,
-                0,
-                1,
-                2,
             );
             let s = from_raw_parts((*result).bytes, (*result).bytes_size as usize);
             let text = from_utf8(s);
@@ -292,8 +283,8 @@ mod tests {
             [
                 (72i32, 116i32),
                 (228i32, 111i32),
-                (233i32, 268i32),
-                (76i32, 273i32)
+                (233i32, 269i32),
+                (75i32, 273i32)
             ]
         );
     }
