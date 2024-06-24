@@ -2,7 +2,7 @@
 name = "zxing-rs"
 version = "0.1.1"
 authors = ["higumachan <yuta.hinokuma725@gmail.com>"]
-edition = "2018"
+edition = "2021"
 description = "port from [zxing-cpp](https://github.com/nu-book/zxing-cpp)"
 repository = "https://github.com/higumachan/zxing-rs"
 license = "Apache-2.0"

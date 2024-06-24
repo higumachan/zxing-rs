@@ -9,7 +9,6 @@
 #include "MultiFormatWriter.h"
 #include "BitMatrix.h"
 #include "TextUtfEncoding.h"
-#include "ZXStrConvWorkaround.h"
 
 int zxing_write_qrcode(const char* text, uint8_t ** buffer, int format, int width, int height, int margin, int ecc_level)
 {
@@ -17,7 +16,7 @@ int zxing_write_qrcode(const char* text, uint8_t ** buffer, int format, int widt
     writer.setMargin(margin);
     writer.setEccLevel(ecc_level);
 
-    auto matrix = writer.encode(ZXing::TextUtfEncoding::FromUtf8(text), width, height);
+    auto matrix = writer.encode(text, width, height);
     int size = matrix.width() * matrix.height();
     *buffer = (unsigned char*)std::calloc(matrix.width() * matrix.height(), sizeof(unsigned char));
     const unsigned char black = 0;

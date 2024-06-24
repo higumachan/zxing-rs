@@ -18,8 +18,7 @@ typedef struct ZxingQrResult {
 
 
 extern "C" {
-    int zxing_read_qrcode(ZXING_RESULT **result, const uint8_t *buffer, int width, int height, int row_bytes,
-                          int pixel_bytes, int index_r, int index_g, int index_b);
+    int zxing_read_qrcode(ZXING_RESULT **result, const uint8_t *buffer, int width, int height, int row_bytes, int pixel_bytes);
     int release_result(ZXING_RESULT* result);
 }
 
